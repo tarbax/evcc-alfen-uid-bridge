@@ -39,6 +39,8 @@ def _make_config(**overrides):
     cfg.dry_run = False
     cfg.log_level = "DEBUG"
     cfg.log_uid_plaintext = True
+    cfg.backoffice_check_enabled = False  # not under test here; set by Config.from_env() only
+    cfg.notify_url = ""
     for k, v in overrides.items():
         setattr(cfg, k, v)
     return cfg
@@ -202,7 +204,7 @@ def test_evcc_online_sets_flag_and_clears_vehicle():
 
 
 def test_evcc_restart_connect_uses_extended_lookback():
-    """After EVCC restart, _handle_connect must scan with max_pages=100."""
+    """After EVCC restart, _handle_connect must scan with max_pages=700."""
     cfg = _make_config()
     orch = _make_orch(cfg, alfen_uid="04A1B2C3")
     orch._evcc_just_restarted = True
@@ -210,7 +212,7 @@ def test_evcc_restart_connect_uses_extended_lookback():
     orch._handle_connect(datetime.now(tz=timezone.utc))
 
     _, kwargs = orch._mock_alfen.get_latest_tag.call_args
-    assert kwargs.get("max_pages") == 100
+    assert kwargs.get("max_pages") == 700
     orch._evcc.set_vehicle.assert_called_once_with("bmw320e")
 
 
@@ -261,7 +263,7 @@ def test_startup_check_unset_vehicle_scans_log():
 
     orch._evcc.set_vehicle.assert_called_once_with("bmw320e")
     _, kwargs = orch._mock_alfen.get_latest_tag.call_args
-    assert kwargs.get("max_pages") == 100
+    assert kwargs.get("max_pages") == 700
 
 
 def test_startup_check_unknown_vehicle_name_triggers_scan():

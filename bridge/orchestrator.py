@@ -110,7 +110,7 @@ class Orchestrator:
             self._current_vehicle = vehicle
 
     def _identify_from_log(self, lookback_s: int) -> Optional[str]:
-        """Single-shot historical Alfen log scan — no deadline, up to 100 pages."""
+        """Single-shot historical Alfen log scan — no deadline, up to 700 pages."""
         since = datetime.now(tz=timezone.utc)
         with self._alfen_lock:
             alfen = self._make_alfen()
