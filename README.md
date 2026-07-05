@@ -41,6 +41,8 @@ EVCC has a built-in vehicle detection mechanism that polls each configured vehic
 - Multiple vehicles from the same household will all show as "at home", making disambiguation impossible.
 - The BMW CarData API in particular is known to be flaky and slow to update.
 
+Worse, native detection doesn't just fail passively — it can **actively undo the bridge**. With the Alfen in EMS mode (no RFID exposed to EVCC), detection falls back to *status polling*: on plug-in EVCC picks whichever vehicle's cloud `Status()` reports "plugged in". If the car the bridge just selected reports "unplugged" because its cloud data is stale, EVCC flags the loadpoint as unidentified and **reverts the selection to a guest/unknown vehicle**, racing over the bridge's assignment. The bridge setup therefore **disables native detection** by pinning a default vehicle on the loadpoint (see [Installation step 5](#5-add-an-unknown-vehicle-and-disable-evccs-native-detection)).
+
 ### The Alfen local API as a side-channel
 
 The Alfen Single Pro-line exposes a local HTTPS management API (the same one used by the MyEve app and ACE Service Installer). This API provides access to a structured device log that records every RFID tap event — **including the full card UID** — within seconds of it happening.
@@ -178,9 +180,9 @@ UID_VEHICLE_MAP={"04AABBCCDDEEFF": "bmwx130e", "12345678": "bmw320e"}
 
 Vehicle names must match the `name:` field of the vehicle entries in your `evcc.yaml`.
 
-### 5. (Optional) Add an "Unknown" vehicle to EVCC
+### 5. Add an "Unknown" vehicle and disable EVCC's native detection
 
-If you want unknown RFID cards (visitors, test cards) to charge under a named fallback vehicle instead of leaving EVCC in auto-detection mode, add this to your `evcc.yaml`:
+**5a. Define an `unknown` fallback vehicle.** It serves two purposes: a named target for unrecognised cards, and — more importantly — the loadpoint default that switches EVCC's own detection off (step 5b). Add to your `evcc.yaml`:
 
 ```yaml
 vehicles:
@@ -191,16 +193,26 @@ vehicles:
     capacity: 50     # set a sensible default capacity in kWh
 ```
 
-Then in `.env`:
+**5b. Pin it as the loadpoint's default vehicle (recommended).** This is what stops EVCC's native detection from racing the bridge. Add `vehicle: unknown` to the loadpoint that drives the Alfen:
+
+```yaml
+loadpoints:
+  - title: EV Charger
+    charger: alfen        # your Alfen charger
+    vehicle: unknown      # default vehicle → disables native status-based detection
+    # ...rest of your loadpoint config
+```
+
+With a default vehicle configured, EVCC assigns it on plug-in and **never runs status-based auto-detection** (`vehicleUnidentified()` short-circuits while a vehicle is assigned). The bridge then overrides the selection via the REST API on each connect, and that choice **sticks for the whole session** — reset back to `unknown` only on unplug. Without this, EVCC can revert the bridge's assignment to a guest vehicle whenever a car's cloud status is stale (see [Why EVCC's built-in vehicle detection falls short](#why-evccs-built-in-vehicle-detection-falls-short)).
+
+**5c. Enable the unknown-card fallback (optional).** If your charger is accessible to people other than the registered owners (family members, guests, visitors), make unrecognised cards charge under the `unknown` vehicle by setting in `.env`:
 
 ```
 ON_UNKNOWN_TAG=default
 DEFAULT_VEHICLE=unknown
 ```
 
-> **When to use this:** Add the `unknown` vehicle if your charger is accessible to people other than the registered vehicle owners (family members, guests, visitors). Without it, an unrecognised card leaves EVCC in auto-detection mode, which may assign the wrong vehicle or none at all.
->
-> **Note:** EVCC's built-in "Guest vehicle" (visible in the UI dropdown) cannot be set via the REST API and is therefore not usable as a bridge target. The `unknown` vehicle defined above is a separate, API-accessible entry.
+> **Note:** EVCC's built-in "Guest vehicle" (visible in the UI dropdown) cannot be set via the REST API, so it is usable neither as a bridge target nor as a loadpoint default. The `unknown` vehicle defined above is a separate, API-accessible entry that works for both.
 
 ### 6. Run in dry-run mode to verify
 
