@@ -65,11 +65,26 @@ class EvccClient:
         return ok
 
     def get_vehicle(self) -> str:
-        """Return the currently selected vehicle name, or '' if none/error."""
-        url = f"{self._base}/api/loadpoints/{self._lp}/vehicle"
+        """Return this loadpoint's currently selected vehicle name, or '' if none/error.
+
+        Read from /api/state → loadpoints[lp-1].vehicleName. There is no
+        GET /api/loadpoints/{id}/vehicle endpoint (it 404s, e.g. on evcc
+        0.310.x), so the loadpoint list in the global state is the source of
+        truth. Loadpoint ids are 1-based in the API but the state array is
+        0-indexed, hence lp-1.
+        """
+        url = f"{self._base}/api/state"
         try:
             resp = requests.get(url, timeout=5)
             resp.raise_for_status()
-            return resp.json().get("result", "")
-        except Exception:
+            data = resp.json()
+            state = data.get("result", data)  # tolerate a 'result' wrapper if added later
+            loadpoints = state.get("loadpoints", [])
+            idx = self._lp - 1
+            if 0 <= idx < len(loadpoints):
+                return loadpoints[idx].get("vehicleName") or ""
+            log.warning("evcc: loadpoint index %d out of range (%d loadpoints)", idx, len(loadpoints))
+            return ""
+        except Exception as exc:
+            log.warning("evcc: get_vehicle failed: %s", exc)
             return ""
