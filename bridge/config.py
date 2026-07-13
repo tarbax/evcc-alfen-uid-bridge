@@ -53,8 +53,13 @@ class Config:
 
         c.tag_wait_timeout = int(_env("TAG_WAIT_TIMEOUT_S", "15"))
         c.tag_poll_interval = int(_env("TAG_POLL_INTERVAL_S", "3"))
-        c.login_rate_max = int(_env("LOGIN_RATE_MAX", "5"))
+        c.login_rate_max = int(_env("LOGIN_RATE_MAX", "8"))
         c.login_rate_window = int(_env("LOGIN_RATE_WINDOW_S", "60"))
+        # The Alfen is often busy negotiating the session at the exact moment a car
+        # plugs in, so the first login can time out. Retry a few times before giving
+        # up and leaving EVCC on auto-detection (which yields an "unknown" vehicle).
+        c.login_retries = int(_env("LOGIN_RETRIES", "4"))
+        c.login_retry_backoff = float(_env("LOGIN_RETRY_BACKOFF_S", "5"))
 
         c.evcc_base_url = _env("EVCC_BASE_URL", required=True).rstrip("/")
         c.evcc_loadpoint_id = int(_env("EVCC_LOADPOINT_ID", required=True))
@@ -91,6 +96,8 @@ class Config:
             f"  alfen_tls_verify    = {self.alfen_tls_verify}",
             f"  tag_wait_timeout_s  = {self.tag_wait_timeout}",
             f"  tag_poll_interval_s = {self.tag_poll_interval}",
+            f"  login_retries       = {self.login_retries}",
+            f"  login_retry_backoff = {self.login_retry_backoff}",
             f"  evcc_base_url       = {self.evcc_base_url}",
             f"  evcc_loadpoint_id   = {self.evcc_loadpoint_id}",
             f"  release_on_disconnect = {self.release_on_disconnect}",

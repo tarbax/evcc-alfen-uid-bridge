@@ -23,8 +23,10 @@ def _make_config(**overrides):
     cfg.alfen_tls_verify = False
     cfg.tag_wait_timeout = 6
     cfg.tag_poll_interval = 1
-    cfg.login_rate_max = 5
+    cfg.login_rate_max = 8
     cfg.login_rate_window = 60
+    cfg.login_retries = 4
+    cfg.login_retry_backoff = 0  # no sleep in tests
     cfg.evcc_base_url = "http://127.0.0.1:7070"
     cfg.evcc_loadpoint_id = 1
     cfg.release_on_disconnect = True
@@ -294,6 +296,45 @@ def test_startup_check_log_empty_auto_mode_no_action():
     orch._handle_startup_check()
 
     orch._evcc.set_vehicle.assert_not_called()
+
+
+# ---- Login retry -------------------------------------------------------------
+
+def test_connect_retries_login_then_identifies():
+    """A transient login failure must be retried, not abandoned → vehicle still set."""
+    cfg = _make_config()
+    orch = _make_orch(cfg, alfen_uid="04A1B2C3")
+    # First login attempt fails (transient timeout), second succeeds.
+    orch._mock_alfen.login.side_effect = [False, True]
+
+    orch._handle_connect(datetime.now(tz=timezone.utc))
+
+    assert orch._mock_alfen.login.call_count == 2
+    orch._evcc.set_vehicle.assert_called_once_with("bmw320e")
+
+
+def test_connect_gives_up_after_all_login_retries():
+    """If every login attempt fails, give up after login_retries and set no vehicle."""
+    cfg = _make_config(login_retries=3)
+    orch = _make_orch(cfg, alfen_uid="04A1B2C3")
+    orch._mock_alfen.login.return_value = False
+
+    orch._handle_connect(datetime.now(tz=timezone.utc))
+
+    assert orch._mock_alfen.login.call_count == 3
+    orch._evcc.set_vehicle.assert_not_called()
+
+
+def test_identify_from_log_retries_login():
+    """The historical-scan path (startup/restart) must also retry login."""
+    cfg = _make_config()
+    orch = _make_orch(cfg, alfen_uid="04A1B2C3", evcc_vehicle="unknown")
+    orch._mock_alfen.login.side_effect = [False, False, True]
+
+    orch._handle_startup_check()
+
+    assert orch._mock_alfen.login.call_count == 3
+    orch._evcc.set_vehicle.assert_called_once_with("bmw320e")
 
 
 def test_hard_crash_recovery_sets_vehicle():

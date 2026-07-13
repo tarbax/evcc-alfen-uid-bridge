@@ -77,6 +77,28 @@ class Orchestrator:
             log_uid_plaintext=cfg.log_uid_plaintext,
         )
 
+    def _login_with_retry(self, alfen: AlfenClient) -> bool:
+        """Log in to the Alfen, retrying transient failures.
+
+        The charger is frequently busy negotiating the charging session at the
+        exact moment a car plugs in, so the first login often times out. Without
+        a retry, that single failure abandons identification and EVCC falls back
+        to auto-detection (→ an "unknown" vehicle). Retry a bounded number of
+        times with a fixed backoff before giving up.
+        """
+        attempts = max(1, self._cfg.login_retries)
+        for attempt in range(1, attempts + 1):
+            if alfen.login():
+                if attempt > 1:
+                    log.info("orchestrator: Alfen login succeeded on attempt %d/%d",
+                             attempt, attempts)
+                return True
+            if attempt < attempts:
+                log.warning("orchestrator: Alfen login attempt %d/%d failed, retrying in %.0fs",
+                            attempt, attempts, self._cfg.login_retry_backoff)
+                time.sleep(self._cfg.login_retry_backoff)
+        return False
+
     def _apply_vehicle_for_uid(self, uid: str):
         """Map a UID to an EVCC vehicle name and set it, or apply unknown-tag behaviour."""
         normalised = normalise_uid(uid)
@@ -114,8 +136,8 @@ class Orchestrator:
         since = datetime.now(tz=timezone.utc)
         with self._alfen_lock:
             alfen = self._make_alfen()
-            if not alfen.login():
-                log.warning("orchestrator: could not login to Alfen")
+            if not self._login_with_retry(alfen):
+                log.warning("orchestrator: could not login to Alfen after retries")
                 return None
             try:
                 self._check_and_notify_backoffice(alfen)
@@ -143,8 +165,9 @@ class Orchestrator:
 
         with self._alfen_lock:
             alfen = self._make_alfen()
-            if not alfen.login():
-                log.warning("orchestrator: could not login to Alfen, leaving EVCC on auto-detection")
+            if not self._login_with_retry(alfen):
+                log.warning("orchestrator: could not login to Alfen after retries, "
+                            "leaving EVCC on auto-detection")
                 return
 
             try:
