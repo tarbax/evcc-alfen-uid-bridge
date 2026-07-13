@@ -60,6 +60,13 @@ class Config:
         # up and leaving EVCC on auto-detection (which yields an "unknown" vehicle).
         c.login_retries = int(_env("LOGIN_RETRIES", "4"))
         c.login_retry_backoff = float(_env("LOGIN_RETRY_BACKOFF_S", "5"))
+        # Drivers often plug in first and tap the card seconds-to-minutes later,
+        # so the tap can land after the initial TAG_WAIT_TIMEOUT_S poll closes.
+        # After the initial poll fails, keep re-scanning the Alfen log in the
+        # background every TAG_RESCAN_INTERVAL_S until a known tag is found, the
+        # car disconnects, or TAG_IDENTIFY_MAX_S elapses.
+        c.tag_rescan_interval = int(_env("TAG_RESCAN_INTERVAL_S", "20"))
+        c.tag_identify_max = int(_env("TAG_IDENTIFY_MAX_S", "600"))
 
         c.evcc_base_url = _env("EVCC_BASE_URL", required=True).rstrip("/")
         c.evcc_loadpoint_id = int(_env("EVCC_LOADPOINT_ID", required=True))
@@ -98,6 +105,8 @@ class Config:
             f"  tag_poll_interval_s = {self.tag_poll_interval}",
             f"  login_retries       = {self.login_retries}",
             f"  login_retry_backoff = {self.login_retry_backoff}",
+            f"  tag_rescan_interval = {self.tag_rescan_interval}",
+            f"  tag_identify_max_s  = {self.tag_identify_max}",
             f"  evcc_base_url       = {self.evcc_base_url}",
             f"  evcc_loadpoint_id   = {self.evcc_loadpoint_id}",
             f"  release_on_disconnect = {self.release_on_disconnect}",

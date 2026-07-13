@@ -43,6 +43,10 @@ class Orchestrator:
         self._car_connected: bool = False
         self._evcc_just_restarted: bool = False
 
+        # Background re-identification (for taps that arrive after the initial poll).
+        self._identify_cancel = threading.Event()
+        self._identify_thread: Optional[threading.Thread] = None
+
         self._rate_limiter = RateLimiter(config.login_rate_max, config.login_rate_window)
 
         self._evcc = EvccClient(
@@ -99,26 +103,40 @@ class Orchestrator:
                 time.sleep(self._cfg.login_retry_backoff)
         return False
 
+    def _resolve_vehicle(self, uid: str) -> Optional[str]:
+        """Map a UID to an EVCC vehicle name, or None if unknown.
+
+        Handles exact matches and prefix matches for UIDs that firmware truncates
+        on the state-line (e.g. "EB15" for "EB153E74"). Returns None for an
+        unknown card or an ambiguous prefix.
+        """
+        normalised = normalise_uid(uid)
+        uid_label = uid if self._cfg.log_uid_plaintext else uid_hash(normalised)
+
+        vehicle = self._cfg.uid_vehicle_map.get(normalised)
+        if vehicle:
+            return vehicle
+
+        # State-line UIDs may be truncated by firmware (e.g. "5B9F" instead of
+        # "5B9F4379"). Try prefix match: find map keys that start with the found UID.
+        prefix_matches = {k: v for k, v in self._cfg.uid_vehicle_map.items()
+                          if k.startswith(normalised)}
+        if len(prefix_matches) == 1:
+            log.info("orchestrator: UID %s matched by prefix to %s",
+                     uid_label, next(iter(prefix_matches)))
+            return next(iter(prefix_matches.values()))
+        if len(prefix_matches) > 1:
+            log.warning("orchestrator: UID %s is an ambiguous prefix (%d matches), skipping",
+                        uid_label, len(prefix_matches))
+        return None
+
     def _apply_vehicle_for_uid(self, uid: str):
         """Map a UID to an EVCC vehicle name and set it, or apply unknown-tag behaviour."""
         normalised = normalise_uid(uid)
         uid_label = uid if self._cfg.log_uid_plaintext else uid_hash(normalised)
         log.info("orchestrator: tag acquired uid_hash=%s", uid_label)
 
-        vehicle = self._cfg.uid_vehicle_map.get(normalised)
-        if not vehicle:
-            # State-line UIDs may be truncated by firmware (e.g. "5B9F" instead of
-            # "5B9F4379"). Try prefix match: find map keys that start with the found UID.
-            prefix_matches = {k: v for k, v in self._cfg.uid_vehicle_map.items()
-                              if k.startswith(normalised)}
-            if len(prefix_matches) == 1:
-                vehicle = next(iter(prefix_matches.values()))
-                log.info("orchestrator: UID %s matched by prefix to %s",
-                         uid_label, next(iter(prefix_matches)))
-            elif len(prefix_matches) > 1:
-                log.warning("orchestrator: UID %s is an ambiguous prefix (%d matches), skipping",
-                            uid_label, len(prefix_matches))
-
+        vehicle = self._resolve_vehicle(uid)
         if not vehicle:
             log.warning("orchestrator: UID %s not in map", uid_label)
             self._apply_unknown_tag()
@@ -147,6 +165,7 @@ class Orchestrator:
 
     def _handle_connect(self, connect_time: datetime):
         self._car_connected = True
+        self._cancel_background_identify()  # supersede any prior connect's scan
 
         # EVCC just restarted: the tap happened in the past — historical scan, no deadline
         if self._evcc_just_restarted:
@@ -190,14 +209,84 @@ class Orchestrator:
                 alfen.logout()
 
         if not uid:
-            log.warning("orchestrator: no RFID tag found within %ds window", self._cfg.tag_wait_timeout)
+            log.warning("orchestrator: no RFID tag in initial %ds window — "
+                        "applying default and starting background re-scan",
+                        self._cfg.tag_wait_timeout)
             self._apply_unknown_tag()
+            self._start_background_identify(connect_time)
             return
 
         self._apply_vehicle_for_uid(uid)
 
+    def _start_background_identify(self, connect_time: datetime):
+        """Keep re-scanning the Alfen log until a known tag appears.
+
+        Drivers may plug in first and tap the card seconds-to-minutes later, so the
+        tap can land after the synchronous poll closes. Run brief, cancellable scans
+        (each a short-lived Alfen session — respects the single-session rule) on a
+        background thread until a known tag is found, the car disconnects, or
+        TAG_IDENTIFY_MAX_S elapses.
+        """
+        self._cancel_background_identify()
+        cancel = threading.Event()
+        self._identify_cancel = cancel
+        t = threading.Thread(
+            target=self._background_identify_loop,
+            args=(connect_time, cancel),
+            daemon=True,
+            name="bg-identify",
+        )
+        self._identify_thread = t
+        t.start()
+
+    def _cancel_background_identify(self):
+        """Signal any running background-identify thread to stop."""
+        self._identify_cancel.set()
+
+    def _background_identify_loop(self, connect_time: datetime, cancel: threading.Event):
+        deadline = time.monotonic() + self._cfg.tag_identify_max
+        interval = self._cfg.tag_rescan_interval
+        known = set(self._cfg.uid_vehicle_map.values())
+
+        while not cancel.is_set() and time.monotonic() < deadline:
+            # Wait first — the synchronous poll already scanned once just now.
+            if cancel.wait(interval):
+                break
+            if self._current_vehicle in known:
+                return  # identified in the meantime (e.g. by another handler)
+
+            # Look back over the whole connected session so far (+ margin), so a tap
+            # at any point since plug-in is seen — but never far enough to reach a
+            # previous session's tap.
+            now = datetime.now(tz=timezone.utc)
+            lookback = int((now - connect_time).total_seconds()) + 90
+
+            uid: Optional[str] = None
+            with self._alfen_lock:
+                if cancel.is_set():
+                    break
+                alfen = self._make_alfen()
+                if not self._login_with_retry(alfen):
+                    continue
+                try:
+                    uid = alfen.get_latest_tag(since=now, lookback_s=lookback, max_pages=700)
+                finally:
+                    alfen.logout()
+
+            if cancel.is_set():
+                break
+            if uid and self._resolve_vehicle(uid):
+                log.info("orchestrator: background re-scan found a known tag")
+                self._apply_vehicle_for_uid(uid)
+                return
+
+        if not cancel.is_set():
+            log.info("orchestrator: background re-scan gave up after %ds without a known tag",
+                     self._cfg.tag_identify_max)
+
     def _handle_disconnect(self):
         self._car_connected = False
+        self._cancel_background_identify()
         if not self._cfg.release_on_disconnect:
             log.debug("orchestrator: release_on_disconnect=false, keeping selection")
             return
@@ -206,6 +295,7 @@ class Orchestrator:
 
     def _handle_evcc_online(self):
         self._current_vehicle = None
+        self._cancel_background_identify()
 
         if self._car_connected:
             # Car is already connected. On a clean EVCC shutdown it will have published

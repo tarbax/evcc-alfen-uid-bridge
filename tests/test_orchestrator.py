@@ -27,6 +27,8 @@ def _make_config(**overrides):
     cfg.login_rate_window = 60
     cfg.login_retries = 4
     cfg.login_retry_backoff = 0  # no sleep in tests
+    cfg.tag_rescan_interval = 0  # no wait between background re-scans in tests
+    cfg.tag_identify_max = 0     # background loop no-ops by default; override per test
     cfg.evcc_base_url = "http://127.0.0.1:7070"
     cfg.evcc_loadpoint_id = 1
     cfg.release_on_disconnect = True
@@ -296,6 +298,62 @@ def test_startup_check_log_empty_auto_mode_no_action():
     orch._handle_startup_check()
 
     orch._evcc.set_vehicle.assert_not_called()
+
+
+# ---- Background re-identification (late card tap) ---------------------------
+
+def test_background_identify_finds_late_tap():
+    """A tap that lands after the initial poll must be picked up by a re-scan."""
+    cfg = _make_config(tag_rescan_interval=0, tag_identify_max=2)
+    orch = _make_orch(cfg, alfen_uid="04A1B2C3")  # tap now visible in the log
+
+    orch._background_identify_loop(datetime.now(tz=timezone.utc), threading.Event())
+
+    orch._evcc.set_vehicle.assert_called_once_with("bmw320e")
+
+
+def test_background_identify_ignores_unknown_tag_and_gives_up():
+    """An unknown card must not be applied; loop ends without setting a vehicle."""
+    cfg = _make_config(tag_rescan_interval=0, tag_identify_max=1)
+    orch = _make_orch(cfg, alfen_uid="DEADBEEF")  # not in the map
+
+    orch._background_identify_loop(datetime.now(tz=timezone.utc), threading.Event())
+
+    orch._evcc.set_vehicle.assert_not_called()
+
+
+def test_background_identify_stops_when_cancelled():
+    """A cancelled loop (car disconnected) must not touch the Alfen or EVCC."""
+    cfg = _make_config(tag_rescan_interval=5, tag_identify_max=600)
+    orch = _make_orch(cfg, alfen_uid="04A1B2C3")
+    cancel = threading.Event()
+    cancel.set()
+
+    orch._background_identify_loop(datetime.now(tz=timezone.utc), cancel)
+
+    orch._mock_alfen.login.assert_not_called()
+    orch._evcc.set_vehicle.assert_not_called()
+
+
+def test_connect_with_no_tag_starts_background_scan():
+    """When the initial poll finds nothing, a background identify thread must start."""
+    cfg = _make_config(tag_wait_timeout=0)
+    orch = _make_orch(cfg, alfen_uid=None)  # nothing in the initial window
+
+    with patch.object(orch, "_start_background_identify") as start_bg:
+        orch._handle_connect(datetime.now(tz=timezone.utc))
+        start_bg.assert_called_once()
+
+
+def test_disconnect_cancels_background_scan():
+    """Disconnect must cancel a running background identify."""
+    cfg = _make_config()
+    orch = _make_orch(cfg)
+    orch._identify_cancel = threading.Event()
+
+    orch._handle_disconnect()
+
+    assert orch._identify_cancel.is_set()
 
 
 # ---- Login retry -------------------------------------------------------------
