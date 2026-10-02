@@ -6,21 +6,40 @@
 
 ## Home Assistant app
 
-This repository can be added as a custom app repository on Home Assistant OS or a
-Supervised installation. In **Settings → Apps → App store**, open the menu,
-choose **Repositories**, and add this repository's Git URL. Install **EVCC Alfen
-UID Bridge**, set the Alfen host and password, EVCC URL and loadpoint, MQTT
-broker details, and the JSON `UID_VEHICLE_MAP`, then start it.
+The repository includes a Home Assistant app for Home Assistant OS and
+Supervised installations. In Home Assistant, open **Settings → Apps → App
+store**, select the menu, choose **Repositories**, and add:
 
-The app uses host networking so it can reach the charger and services on your
-local network. Set `DRY_RUN` to `true` for the first run; after confirming the
-logs identify the intended vehicle, turn it off to allow vehicle assignments.
-The app configuration uses Home Assistant's secret field for passwords. Full
-card UIDs are sensitive: keep them out of logs except during temporary card
-discovery, and protect access to the app configuration.
+```text
+https://github.com/tarbax/evcc-alfen-uid-bridge
+```
 
-The app image is built locally by Home Assistant. No prebuilt registry image is
-configured in this repository.
+Install **EVCC Alfen UID Bridge** from that repository. Before starting it,
+configure the Alfen host and password, EVCC URL and loadpoint ID, MQTT broker
+details, and the RFID-to-vehicle map. The map is JSON, for example:
+
+```json
+{"04AABBCCDDEEFF":"bmwx130e","12345678":"bmw320e"}
+```
+
+Use your own card UIDs and EVCC vehicle names. UIDs are sensitive; do not copy
+the example values as real card data.
+
+The app uses host networking to reach the charger, EVCC, and MQTT broker. Enter
+addresses reachable from the Home Assistant host; `127.0.0.1` works when the
+corresponding service is listening on that host. Password options use Home
+Assistant's password field.
+
+`DRY_RUN` is enabled by default. Start the app in this mode and check its logs
+to confirm that the correct vehicle is identified. Disable `DRY_RUN` only after
+that check; then the bridge can change EVCC's vehicle selection. Keep
+`LOG_UID_PLAINTEXT` disabled except during temporary RFID discovery.
+
+For back-office notifications, configure `NOTIFY_URL` with the local Home
+Assistant webhook URL described under [Notifications](#notifications).
+
+Home Assistant builds the app image locally when installing it from this
+repository; a prebuilt container image is not published yet.
 
 ---
 
