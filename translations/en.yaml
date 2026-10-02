@@ -16,7 +16,10 @@ configuration:
   TAG_POLL_INTERVAL_S:
     name: RFID polling interval
   EVCC_BASE_URL:
-    name: EVCC URL
+    name: EVCC URL override
+    description: Optional. Leave empty to discover one running EVCC app automatically.
+  EVCC_AUTO_DISCOVERY:
+    name: Discover EVCC app automatically
   EVCC_LOADPOINT_ID:
     name: EVCC loadpoint ID
   RELEASE_ON_DISCONNECT:
@@ -26,13 +29,16 @@ configuration:
   DEFAULT_VEHICLE:
     name: Fallback EVCC vehicle
   MQTT_HOST:
-    name: MQTT broker host
+    name: MQTT broker host override
+    description: Optional. Leave empty to use the Home Assistant MQTT service.
   MQTT_PORT:
     name: MQTT broker port
   MQTT_USERNAME:
     name: MQTT username
   MQTT_PASSWORD:
     name: MQTT password
+  MQTT_AUTO_DISCOVERY:
+    name: Discover Home Assistant MQTT service automatically
   MQTT_TOPIC_PREFIX:
     name: EVCC MQTT topic prefix
   UID_VEHICLE_MAP:

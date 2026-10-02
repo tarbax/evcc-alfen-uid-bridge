@@ -1,5 +1,5 @@
 name: EVCC Alfen UID Bridge
-version: "0.2.0"
+version: "0.2.1"
 slug: evcc_alfen_uid_bridge
 description: Identifies EVCC vehicles from Alfen RFID card events.
 arch:
@@ -7,9 +7,12 @@ arch:
   - aarch64
 startup: application
 boot: auto
-host_network: true
+host_network: false
+hassio_api: true
 init: false
 stage: experimental
+services:
+  - mqtt:want
 options:
   ALFEN_HOST: null
   ALFEN_USERNAME: admin
@@ -24,15 +27,12 @@ options:
   LOGIN_RETRY_BACKOFF_S: 5
   TAG_RESCAN_INTERVAL_S: 20
   TAG_IDENTIFY_MAX_S: 600
-  EVCC_BASE_URL: http://127.0.0.1:7070
+  EVCC_AUTO_DISCOVERY: true
   EVCC_LOADPOINT_ID: 1
   RELEASE_ON_DISCONNECT: true
   ON_UNKNOWN_TAG: auto
   DEFAULT_VEHICLE: ""
-  MQTT_HOST: 127.0.0.1
-  MQTT_PORT: 1883
-  MQTT_USERNAME: ""
-  MQTT_PASSWORD: ""
+  MQTT_AUTO_DISCOVERY: true
   MQTT_TOPIC_PREFIX: evcc
   UID_VEHICLE_MAP: null
   BACKOFFICE_CHECK_ENABLED: true
@@ -54,15 +54,17 @@ schema:
   LOGIN_RETRY_BACKOFF_S: float(0,)
   TAG_RESCAN_INTERVAL_S: int(1,)
   TAG_IDENTIFY_MAX_S: int(1,)
-  EVCC_BASE_URL: url
+  EVCC_BASE_URL: url?
+  EVCC_AUTO_DISCOVERY: bool
   EVCC_LOADPOINT_ID: int(1,)
   RELEASE_ON_DISCONNECT: bool
   ON_UNKNOWN_TAG: list(auto|default)
   DEFAULT_VEHICLE: str
-  MQTT_HOST: str
-  MQTT_PORT: port
-  MQTT_USERNAME: str
-  MQTT_PASSWORD: password
+  MQTT_HOST: str?
+  MQTT_PORT: port?
+  MQTT_USERNAME: str?
+  MQTT_PASSWORD: password?
+  MQTT_AUTO_DISCOVERY: bool
   MQTT_TOPIC_PREFIX: str
   UID_VEHICLE_MAP: str
   BACKOFFICE_CHECK_ENABLED: bool

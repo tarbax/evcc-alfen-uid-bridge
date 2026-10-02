@@ -15,8 +15,9 @@ https://github.com/tarbax/evcc-alfen-uid-bridge
 ```
 
 Install **EVCC Alfen UID Bridge** from that repository. Before starting it,
-configure the Alfen host and password, EVCC URL and loadpoint ID, MQTT broker
-details, and the RFID-to-vehicle map. The map is JSON, for example:
+configure the Alfen host and password, loadpoint ID, and RFID-to-vehicle map.
+EVCC and the Home Assistant MQTT service are discovered automatically by
+default. The map is JSON, for example:
 
 ```json
 {"04AABBCCDDEEFF":"bmwx130e","12345678":"bmw320e"}
@@ -25,10 +26,14 @@ details, and the RFID-to-vehicle map. The map is JSON, for example:
 Use your own card UIDs and EVCC vehicle names. UIDs are sensitive; do not copy
 the example values as real card data.
 
-The app uses host networking to reach the charger, EVCC, and MQTT broker. Enter
-addresses reachable from the Home Assistant host; `127.0.0.1` works when the
-corresponding service is listening on that host. Password options use Home
-Assistant's password field.
+The app discovers one installed EVCC app and the Home Assistant MQTT service
+automatically. Leave the optional connection overrides empty to use discovery.
+If EVCC discovery is ambiguous or MQTT service discovery is unavailable, enter
+`EVCC_BASE_URL` or `MQTT_HOST` manually; MQTT port and credentials can also be
+entered manually. Manual settings take precedence over discovery. Password
+options use Home Assistant's password field. The bridge uses the Home Assistant
+app network to reach peer apps by their internal aliases and can still connect
+to the Alfen charger over your local network.
 
 `DRY_RUN` is enabled by default. Start the app in this mode and check its logs
 to confirm that the correct vehicle is identified. Disable `DRY_RUN` only after
