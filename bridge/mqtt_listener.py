@@ -55,7 +55,7 @@ class MqttListener:
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            log.info("mqtt: connected to %s:%d", self._host, self._port)
+            log.info("mqtt: connection to broker succeeded at %s:%d", self._host, self._port)
             client.subscribe(self._connected_topic)
             client.subscribe(self._status_topic)
             log.debug("mqtt: subscribed to %s, %s", self._connected_topic, self._status_topic)

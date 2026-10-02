@@ -40,6 +40,11 @@ to confirm that the correct vehicle is identified. Disable `DRY_RUN` only after
 that check; then the bridge can change EVCC's vehicle selection. Keep
 `LOG_UID_PLAINTEXT` disabled except during temporary RFID discovery.
 
+At startup, the logs report whether the EVCC state API responds and whether
+the Alfen charger is reachable on TCP port 443. MQTT success is reported after
+the broker accepts the connection. The Alfen API login is confirmed on the
+first RFID log scan; the startup port check does not verify the Alfen password.
+
 For back-office notifications, configure `NOTIFY_URL` with the local Home
 Assistant webhook URL described under [Notifications](#notifications).
 

@@ -15,6 +15,7 @@ Alfen access is serialised via a lock (single-session requirement).
 
 import logging
 import queue
+import socket
 import threading
 import time
 from datetime import datetime, timezone
@@ -93,6 +94,7 @@ class Orchestrator:
         attempts = max(1, self._cfg.login_retries)
         for attempt in range(1, attempts + 1):
             if alfen.login():
+                log.info("alfen: authenticated charger API connection succeeded")
                 if attempt > 1:
                     log.info("orchestrator: Alfen login succeeded on attempt %d/%d",
                              attempt, attempts)
@@ -359,6 +361,37 @@ class Orchestrator:
         except Exception as exc:
             log.warning("orchestrator: back-office check failed (ignored): %s", exc)
 
+    def _check_startup_connections(self):
+        """Report charger network reachability and EVCC API availability at startup."""
+        delays = (0, 2, 5)
+        alfen_reachable = False
+        for delay in delays:
+            if delay:
+                time.sleep(delay)
+            try:
+                with socket.create_connection((self._cfg.alfen_host, 443), timeout=3):
+                    alfen_reachable = True
+                    log.info(
+                        "alfen: network connection to charger port 443 succeeded (%s)",
+                        self._cfg.alfen_host,
+                    )
+                    break
+            except OSError as exc:
+                log.debug("alfen: startup reachability check failed: %s", exc)
+        if not alfen_reachable:
+            log.warning(
+                "alfen: charger port 443 is unreachable (%s)",
+                self._cfg.alfen_host,
+            )
+
+        for delay in delays:
+            if delay:
+                time.sleep(delay)
+            if self._evcc.check_connection():
+                log.info("evcc: API connection succeeded at %s", self._cfg.evcc_base_url)
+                return
+        log.warning("evcc: API at %s is unreachable", self._cfg.evcc_base_url)
+
     def _notify_backoffice_offline(self):
         """Fire-and-forget HTTP POST to NOTIFY_URL with a plain-text offline alert."""
         now_str = datetime.now().strftime("%H:%M:%S %d/%m/%Y")
@@ -421,6 +454,11 @@ class Orchestrator:
         processor = threading.Thread(target=self._event_loop, daemon=True, name="event-processor")
         processor.start()
 
+        threading.Thread(
+            target=self._check_startup_connections,
+            daemon=True,
+            name="startup-connection-check",
+        ).start()
         self._listener.start()
         log.info("orchestrator: running — waiting for events")
 

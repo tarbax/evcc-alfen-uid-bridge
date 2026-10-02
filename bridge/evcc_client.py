@@ -88,3 +88,14 @@ class EvccClient:
         except Exception as exc:
             log.warning("evcc: get_vehicle failed: %s", exc)
             return ""
+
+    def check_connection(self) -> bool:
+        """Check EVCC's state API without changing any loadpoint state."""
+        try:
+            resp = requests.get(f"{self._base}/api/state", timeout=3)
+            resp.raise_for_status()
+            resp.json()
+            return True
+        except Exception as exc:
+            log.debug("evcc: connection check failed: %s", exc)
+            return False

@@ -1,5 +1,5 @@
 name: EVCC Alfen UID Bridge
-version: "0.2.2"
+version: "0.2.3"
 slug: evcc_alfen_uid_bridge
 description: Identifies EVCC vehicles from Alfen RFID card events.
 arch:
