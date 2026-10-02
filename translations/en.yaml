@@ -1,56 +1,94 @@
 configuration:
   ALFEN_HOST:
     name: Alfen charger host
-    description: Hostname or IP address of the charger's local management API.
+    description: Hostname or IP address of the charger's local API. Do not include https://.
   ALFEN_USERNAME:
     name: Alfen username
+    description: Username used to sign in to the charger's local API.
   ALFEN_PASSWORD:
     name: Alfen password
+    description: Password used to sign in to the charger's local API.
   ALFEN_SOCKET:
     name: Alfen socket number
+    description: Charger socket whose RFID events should be matched, usually 1.
   ALFEN_TLS_VERIFY:
     name: Verify Alfen TLS certificate
-    description: Enable only when the charger certificate is trusted by the system.
+    description: Enable only if the charger's HTTPS certificate is trusted; self-signed certificates usually require this to stay off.
   TAG_WAIT_TIMEOUT_S:
     name: Initial RFID wait timeout
+    description: Seconds to search for a card tap immediately after EVCC reports a connected vehicle.
   TAG_POLL_INTERVAL_S:
     name: RFID polling interval
+    description: Seconds between charger log checks during the initial RFID wait.
+  LOGIN_RATE_MAX:
+    name: Maximum Alfen logins per window
+    description: Limit charger logins to avoid temporary lockouts; use a conservative value.
+  LOGIN_RATE_WINDOW_S:
+    name: Alfen login rate window
+    description: Length of the login limit window in seconds.
+  LOGIN_RETRIES:
+    name: Alfen login attempts
+    description: Maximum attempts for a charger login when the charger is temporarily busy.
+  LOGIN_RETRY_BACKOFF_S:
+    name: Delay between Alfen login attempts
+    description: Seconds to wait before retrying a failed charger login.
+  TAG_RESCAN_INTERVAL_S:
+    name: Background RFID rescan interval
+    description: Seconds between additional charger log scans when no card was found during the initial wait.
+  TAG_IDENTIFY_MAX_S:
+    name: Maximum background identification time
+    description: Stop searching for a late card tap after this many seconds.
   EVCC_BASE_URL:
     name: EVCC URL override
-    description: Optional. Leave empty to discover one running EVCC app automatically.
+    description: Optional API base URL, for example http://192.168.1.10:7070. Leave empty to discover one EVCC app automatically.
   EVCC_AUTO_DISCOVERY:
     name: Discover EVCC app automatically
+    description: Find the installed EVCC app through Supervisor. Disable this only when entering the EVCC URL manually.
   EVCC_LOADPOINT_ID:
     name: EVCC loadpoint ID
+    description: Numeric loadpoint to monitor and assign vehicles to; the first loadpoint is 1.
   RELEASE_ON_DISCONNECT:
     name: Release vehicle on disconnect
+    description: Clear the selected vehicle in EVCC when the car disconnects.
   ON_UNKNOWN_TAG:
     name: Action for unknown RFID tags
+    description: Choose auto to leave EVCC unchanged, or default to select the fallback vehicle below.
   DEFAULT_VEHICLE:
     name: Fallback EVCC vehicle
+    description: EVCC vehicle name to use for an unknown card when the action above is default.
   MQTT_HOST:
     name: MQTT broker host override
-    description: Optional. Leave empty to use the Home Assistant MQTT service.
+    description: Optional broker hostname or IP. Leave empty to use the Home Assistant MQTT service.
   MQTT_PORT:
     name: MQTT broker port
+    description: Optional broker port for a manually configured host; defaults to 1883.
   MQTT_USERNAME:
     name: MQTT username
+    description: Optional username for a manually configured broker.
   MQTT_PASSWORD:
     name: MQTT password
+    description: Optional password for a manually configured broker.
   MQTT_AUTO_DISCOVERY:
     name: Discover Home Assistant MQTT service automatically
+    description: Use broker details supplied by Supervisor when no broker host override is set.
   MQTT_TOPIC_PREFIX:
     name: EVCC MQTT topic prefix
+    description: Must match the topic prefix configured in evcc.yaml, usually evcc.
   UID_VEHICLE_MAP:
     name: RFID UID to EVCC vehicle map
-    description: JSON object such as {"04AABBCCDDEEFF":"car_name"}. Keep card UIDs private.
+    description: JSON object mapping card UIDs to exact EVCC vehicle names. Treat card UIDs as sensitive.
   BACKOFFICE_CHECK_ENABLED:
     name: Check Alfen back-office connection
+    description: Check the charger's OCPP back-office status at session start and send an advisory notification when it is offline.
   NOTIFY_URL:
     name: Home Assistant webhook URL
+    description: Webhook endpoint that accepts JSON with title and msg fields for the optional back-office alert.
+  LOG_LEVEL:
+    name: Log level
+    description: INFO is recommended. Choose DEBUG temporarily when diagnosing connection or RFID matching problems.
   LOG_UID_PLAINTEXT:
     name: Log full RFID UIDs
-    description: Use only temporarily while discovering cards; full UIDs identify physical cards.
+    description: Keep disabled normally. Enable temporarily only to discover cards; full UIDs identify physical cards.
   DRY_RUN:
     name: Dry run
-    description: Log intended EVCC actions without changing vehicle selection.
+    description: Log intended vehicle assignments without changing EVCC. Turn off after verifying the UID map.

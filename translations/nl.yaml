@@ -1,0 +1,94 @@
+configuration:
+  ALFEN_HOST:
+    name: Host van de Alfen-laadpaal
+    description: Hostnaam of IP-adres van de lokale API van de laadpaal. Vul geen https:// in.
+  ALFEN_USERNAME:
+    name: Alfen-gebruikersnaam
+    description: Gebruikersnaam voor aanmelden bij de lokale API van de laadpaal.
+  ALFEN_PASSWORD:
+    name: Alfen-wachtwoord
+    description: Wachtwoord voor aanmelden bij de lokale API van de laadpaal.
+  ALFEN_SOCKET:
+    name: Alfen-stopcontactnummer
+    description: Stopcontact waarvan RFID-gebeurtenissen worden verwerkt; meestal 1.
+  ALFEN_TLS_VERIFY:
+    name: Alfen TLS-certificaat controleren
+    description: Schakel dit alleen in als het HTTPS-certificaat van de laadpaal wordt vertrouwd. Zelfondertekende certificaten vereisen meestal dat dit uit staat.
+  TAG_WAIT_TIMEOUT_S:
+    name: Eerste wachttijd op RFID-kaart
+    description: Aantal seconden dat na de EVCC-aansluiting wordt gezocht naar een kaartscan.
+  TAG_POLL_INTERVAL_S:
+    name: Interval voor RFID-controle
+    description: Aantal seconden tussen controles van het laadpaallog tijdens de eerste wachttijd.
+  LOGIN_RATE_MAX:
+    name: Maximaal aantal Alfen-aanmeldingen per periode
+    description: Beperk aanmeldingen om tijdelijke blokkering te voorkomen; kies een voorzichtige waarde.
+  LOGIN_RATE_WINDOW_S:
+    name: Periode voor Alfen-aanmeldlimiet
+    description: Lengte van de periode voor de aanmeldlimiet, in seconden.
+  LOGIN_RETRIES:
+    name: Aantal Alfen-aanmeldpogingen
+    description: Maximaal aantal pogingen als de laadpaal tijdelijk bezet is.
+  LOGIN_RETRY_BACKOFF_S:
+    name: Pauze tussen Alfen-aanmeldpogingen
+    description: Aantal seconden wachten voordat een mislukte aanmelding opnieuw wordt geprobeerd.
+  TAG_RESCAN_INTERVAL_S:
+    name: Interval voor extra RFID-controles
+    description: Aantal seconden tussen extra logcontroles als de eerste scan geen kaart vond.
+  TAG_IDENTIFY_MAX_S:
+    name: Maximale zoektijd naar een kaart
+    description: Stop met zoeken naar een late kaartscan na dit aantal seconden.
+  EVCC_BASE_URL:
+    name: EVCC-URL (handmatige overschrijving)
+    description: Optionele basis-URL, bijvoorbeeld http://192.168.1.10:7070. Laat leeg om één EVCC-app automatisch te vinden.
+  EVCC_AUTO_DISCOVERY:
+    name: EVCC-app automatisch vinden
+    description: Zoek de geïnstalleerde EVCC-app via Supervisor. Schakel dit alleen uit als je de EVCC-URL handmatig invult.
+  EVCC_LOADPOINT_ID:
+    name: EVCC-laadpuntnummer
+    description: Nummer van het laadpunt dat wordt gevolgd en waaraan voertuigen worden toegewezen. Het eerste laadpunt is 1.
+  RELEASE_ON_DISCONNECT:
+    name: Voertuig vrijgeven bij loskoppelen
+    description: Wis de voertuigselectie in EVCC wanneer de auto wordt losgekoppeld.
+  ON_UNKNOWN_TAG:
+    name: Actie bij onbekende RFID-kaart
+    description: Kies auto om EVCC ongewijzigd te laten, of default om het reservevoertuig hieronder te kiezen.
+  DEFAULT_VEHICLE:
+    name: Reservevoertuig in EVCC
+    description: Exacte EVCC-voertuignaam die wordt gebruikt voor een onbekende kaart als de actie hierboven op default staat.
+  MQTT_HOST:
+    name: MQTT-brokerhost (handmatig)
+    description: Optionele hostnaam of IP van de broker. Laat leeg om de MQTT-service van Home Assistant te gebruiken.
+  MQTT_PORT:
+    name: MQTT-brokerpoort
+    description: Optionele poort voor een handmatig ingestelde broker; standaard 1883.
+  MQTT_USERNAME:
+    name: MQTT-gebruikersnaam
+    description: Optionele gebruikersnaam voor een handmatig ingestelde broker.
+  MQTT_PASSWORD:
+    name: MQTT-wachtwoord
+    description: Optioneel wachtwoord voor een handmatig ingestelde broker.
+  MQTT_AUTO_DISCOVERY:
+    name: MQTT-service automatisch vinden
+    description: Gebruik de brokergegevens van Supervisor als er geen handmatige brokerhost is ingevuld.
+  MQTT_TOPIC_PREFIX:
+    name: EVCC MQTT-topicprefix
+    description: Moet overeenkomen met de prefix in evcc.yaml; meestal evcc.
+  UID_VEHICLE_MAP:
+    name: Koppeling van RFID-UID aan EVCC-voertuig
+    description: JSON-object met kaart-UID's en exacte EVCC-voertuignamen. Behandel UID's als gevoelige gegevens.
+  BACKOFFICE_CHECK_ENABLED:
+    name: Alfen-backofficeverbinding controleren
+    description: Controleer bij het begin van een laadsessie de OCPP-backoffice en stuur een melding als die offline is.
+  NOTIFY_URL:
+    name: Home Assistant-webhook-URL
+    description: Webhook die JSON met de velden title en msg accepteert voor de optionele backofficemelding.
+  LOG_LEVEL:
+    name: Logniveau
+    description: INFO is aanbevolen. Kies tijdelijk DEBUG bij problemen met verbindingen of RFID-herkenning.
+  LOG_UID_PLAINTEXT:
+    name: Volledige RFID-UID's loggen
+    description: Laat dit normaal uit. Schakel het alleen tijdelijk in om kaarten te herkennen; volledige UID's identificeren fysieke kaarten.
+  DRY_RUN:
+    name: Proefmodus
+    description: Log voorgenomen voertuigtoewijzingen zonder EVCC te wijzigen. Schakel dit uit nadat je de UID-koppeling hebt gecontroleerd.
