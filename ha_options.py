@@ -22,8 +22,20 @@ def _supervisor_get(path):
         headers={"Authorization": f"Bearer {token}"},
         timeout=(3, 10),
     )
-    response.raise_for_status()
-    return response.json()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as err:
+        # Include the failing endpoint and Supervisor response, but never log
+        # request headers (which contain the Supervisor token).
+        detail = " ".join(response.text.split())[:300]
+        message = f"Supervisor request {path} failed with HTTP {response.status_code}"
+        if detail:
+            message = f"{message}: {detail}"
+        raise RuntimeError(message) from err
+    try:
+        return response.json()
+    except ValueError as err:
+        raise RuntimeError(f"Supervisor request {path} returned invalid JSON") from err
 
 
 def _discover_evcc(options):
@@ -37,9 +49,10 @@ def _discover_evcc(options):
         self_info = self_response.get("data", self_response)
         own_slug = self_info.get("slug")
         response = _supervisor_get("/addons")
-    except requests.RequestException as err:
+    except (requests.RequestException, RuntimeError) as err:
         raise RuntimeError(
-            "Could not read installed Home Assistant apps; set EVCC_BASE_URL manually"
+            f"Could not read installed Home Assistant apps ({err}); "
+            "set EVCC_BASE_URL manually if discovery is unavailable"
         ) from err
     addons = response.get("data", {}).get("addons", response.get("addons", []))
     candidates = [
