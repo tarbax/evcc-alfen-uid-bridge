@@ -1,0 +1,50 @@
+configuration:
+  ALFEN_HOST:
+    name: Alfen charger host
+    description: Hostname or IP address of the charger's local management API.
+  ALFEN_USERNAME:
+    name: Alfen username
+  ALFEN_PASSWORD:
+    name: Alfen password
+  ALFEN_SOCKET:
+    name: Alfen socket number
+  ALFEN_TLS_VERIFY:
+    name: Verify Alfen TLS certificate
+    description: Enable only when the charger certificate is trusted by the system.
+  TAG_WAIT_TIMEOUT_S:
+    name: Initial RFID wait timeout
+  TAG_POLL_INTERVAL_S:
+    name: RFID polling interval
+  EVCC_BASE_URL:
+    name: EVCC URL
+  EVCC_LOADPOINT_ID:
+    name: EVCC loadpoint ID
+  RELEASE_ON_DISCONNECT:
+    name: Release vehicle on disconnect
+  ON_UNKNOWN_TAG:
+    name: Action for unknown RFID tags
+  DEFAULT_VEHICLE:
+    name: Fallback EVCC vehicle
+  MQTT_HOST:
+    name: MQTT broker host
+  MQTT_PORT:
+    name: MQTT broker port
+  MQTT_USERNAME:
+    name: MQTT username
+  MQTT_PASSWORD:
+    name: MQTT password
+  MQTT_TOPIC_PREFIX:
+    name: EVCC MQTT topic prefix
+  UID_VEHICLE_MAP:
+    name: RFID UID to EVCC vehicle map
+    description: JSON object such as {"04AABBCCDDEEFF":"car_name"}. Keep card UIDs private.
+  BACKOFFICE_CHECK_ENABLED:
+    name: Check Alfen back-office connection
+  NOTIFY_URL:
+    name: Home Assistant webhook URL
+  LOG_UID_PLAINTEXT:
+    name: Log full RFID UIDs
+    description: Use only temporarily while discovering cards; full UIDs identify physical cards.
+  DRY_RUN:
+    name: Dry run
+    description: Log intended EVCC actions without changing vehicle selection.

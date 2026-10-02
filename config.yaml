@@ -1,0 +1,72 @@
+name: EVCC Alfen UID Bridge
+version: "0.2.0"
+slug: evcc_alfen_uid_bridge
+description: Identifies EVCC vehicles from Alfen RFID card events.
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+host_network: true
+init: false
+stage: experimental
+options:
+  ALFEN_HOST: null
+  ALFEN_USERNAME: admin
+  ALFEN_PASSWORD: null
+  ALFEN_SOCKET: 1
+  ALFEN_TLS_VERIFY: false
+  TAG_WAIT_TIMEOUT_S: 15
+  TAG_POLL_INTERVAL_S: 3
+  LOGIN_RATE_MAX: 8
+  LOGIN_RATE_WINDOW_S: 60
+  LOGIN_RETRIES: 4
+  LOGIN_RETRY_BACKOFF_S: 5
+  TAG_RESCAN_INTERVAL_S: 20
+  TAG_IDENTIFY_MAX_S: 600
+  EVCC_BASE_URL: http://127.0.0.1:7070
+  EVCC_LOADPOINT_ID: 1
+  RELEASE_ON_DISCONNECT: true
+  ON_UNKNOWN_TAG: auto
+  DEFAULT_VEHICLE: ""
+  MQTT_HOST: 127.0.0.1
+  MQTT_PORT: 1883
+  MQTT_USERNAME: ""
+  MQTT_PASSWORD: ""
+  MQTT_TOPIC_PREFIX: evcc
+  UID_VEHICLE_MAP: null
+  BACKOFFICE_CHECK_ENABLED: true
+  NOTIFY_URL: http://127.0.0.1:8123/api/webhook/evcc-push-CHANGE-ME
+  LOG_LEVEL: INFO
+  LOG_UID_PLAINTEXT: false
+  DRY_RUN: true
+schema:
+  ALFEN_HOST: str
+  ALFEN_USERNAME: str
+  ALFEN_PASSWORD: password
+  ALFEN_SOCKET: int(1,)
+  ALFEN_TLS_VERIFY: bool
+  TAG_WAIT_TIMEOUT_S: int(1,)
+  TAG_POLL_INTERVAL_S: int(1,)
+  LOGIN_RATE_MAX: int(1,)
+  LOGIN_RATE_WINDOW_S: int(1,)
+  LOGIN_RETRIES: int(1,)
+  LOGIN_RETRY_BACKOFF_S: float(0,)
+  TAG_RESCAN_INTERVAL_S: int(1,)
+  TAG_IDENTIFY_MAX_S: int(1,)
+  EVCC_BASE_URL: url
+  EVCC_LOADPOINT_ID: int(1,)
+  RELEASE_ON_DISCONNECT: bool
+  ON_UNKNOWN_TAG: list(auto|default)
+  DEFAULT_VEHICLE: str
+  MQTT_HOST: str
+  MQTT_PORT: port
+  MQTT_USERNAME: str
+  MQTT_PASSWORD: password
+  MQTT_TOPIC_PREFIX: str
+  UID_VEHICLE_MAP: str
+  BACKOFFICE_CHECK_ENABLED: bool
+  NOTIFY_URL: url
+  LOG_LEVEL: list(DEBUG|INFO|WARNING)
+  LOG_UID_PLAINTEXT: bool
+  DRY_RUN: bool

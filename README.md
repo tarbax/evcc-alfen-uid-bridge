@@ -4,6 +4,26 @@
 
 ---
 
+## Home Assistant app
+
+This repository can be added as a custom app repository on Home Assistant OS or a
+Supervised installation. In **Settings → Apps → App store**, open the menu,
+choose **Repositories**, and add this repository's Git URL. Install **EVCC Alfen
+UID Bridge**, set the Alfen host and password, EVCC URL and loadpoint, MQTT
+broker details, and the JSON `UID_VEHICLE_MAP`, then start it.
+
+The app uses host networking so it can reach the charger and services on your
+local network. Set `DRY_RUN` to `true` for the first run; after confirming the
+logs identify the intended vehicle, turn it off to allow vehicle assignments.
+The app configuration uses Home Assistant's secret field for passwords. Full
+card UIDs are sensitive: keep them out of logs except during temporary card
+discovery, and protect access to the app configuration.
+
+The app image is built locally by Home Assistant. No prebuilt registry image is
+configured in this repository.
+
+---
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
