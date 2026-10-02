@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-import runpy
+import pwd
 import sys
 
 import requests
@@ -100,6 +100,17 @@ def _resolve_connection_options(options):
     _discover_evcc(options)
     _discover_mqtt(options)
 
+
+def _drop_privileges():
+    """Run the long-lived bridge as its unprivileged service account."""
+    if os.geteuid() != 0:
+        return
+    bridge_user = pwd.getpwnam("bridge")
+    os.setgroups([])
+    os.setgid(bridge_user.pw_gid)
+    os.setuid(bridge_user.pw_uid)
+
+
 def main():
     options_path = "/data/options.json"
     if os.path.isfile(options_path):
@@ -119,8 +130,10 @@ def main():
             else:
                 os.environ[key] = str(value)
 
-    sys.argv = ["main.py", *sys.argv[1:]]
-    runpy.run_path("/app/main.py", run_name="__main__")
+    # Supervisor API credentials are only needed during option discovery.
+    os.environ.pop("SUPERVISOR_TOKEN", None)
+    _drop_privileges()
+    os.execv(sys.executable, [sys.executable, "-u", "/app/main.py", *sys.argv[1:]])
 
 
 if __name__ == "__main__":
